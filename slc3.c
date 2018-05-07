@@ -1,10 +1,10 @@
 /*
  *  slc3.c
  *
- *  Date Due: May 2, 2018
- *  Authors:  Sam Brendel, Mike Josten
- *  Problem 5
- *  version: 4.30d
+ *  Date Due: June 1, 2018
+ *  Authors:  Mike Josten
+ *  Final Project
+ *  version: 5.6a
  */
 
 #include "slc3.h"
@@ -125,6 +125,15 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         cpu->mar = cpu->pc + offset; // microstate 2.
                         cpu->mdr = memory[cpu->mar]; // microstate 25.
                         break;
+		    case OP_LDI:
+			dr = (cpu->ir & MASK_DR) >> BITSHIFT_DR;
+			offset = cpu->ir & MASK_PCOFFSET9;
+			offset = SEXT(offset, BIT_PCOFFSET9);
+			cpu->mar = cpu->pc + offset;
+			cpu->mdr = memory[cpu->mar];
+			cpu->mar = cpu->mdr;
+			cpu->mdr = memory[cpu->mar];
+			break;
                     case OP_LDR:
                         dr       = (cpu->ir & MASK_DR)  >> BITSHIFT_DR;
                         sr1      = (cpu->ir & MASK_SR1) >> BITSHIFT_SR1;
@@ -139,6 +148,14 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
 			offset = SEXT(offset, BIT_PCOFFSET9);
                         cpu->mar =  cpu->pc + offset; // microstate 2.
                         break;
+		    case OP_STI:
+			dr = (cpu->ir & MASK_DR) >> BITSHIFT_DR; //source register
+			offset = cpu->ir & MASK_PCOFFSET9;
+			offset = SEXT(offset, BIT_PCOFFSET9);
+			cpu->mar = cpu->pc + offset;
+			cpu->mdr = memory[cpu->mar];
+			cpu->mar = cpu->mdr;
+			break;
                     case OP_STR:
                         dr       = (cpu->ir  & MASK_DR)  >> BITSHIFT_DR;  //actually source register
                         sr1      = (cpu->ir  & MASK_SR1) >> BITSHIFT_SR1;  //base register
@@ -185,6 +202,7 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         vector8 = cpu->ir & MASK_TRAPVECT8; // No shift needed.
                         break;
                     case OP_ST: // Same as LD.
+		    case OP_STI:
                     case OP_STR:
                         // Book page 124.
                         cpu->mdr = cpu->reg[dr];
@@ -206,6 +224,10 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                             cpu->pc += offset;
                         }
                         break;
+		    case OP_STACK: //push / pop
+			dr = (cpu->ir & MASK_DR) >> BITSHIFT_DR;
+			bit5 = (cpu->ir & MASK_BIT5) >> BITSHIFT_BIT5;
+			break;
                 }
                 state = EXECUTE;
                 break;
@@ -219,7 +241,7 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         } else if (bit5 == 1) {
                             cpu->mdr = cpu->reg[sr1] + immed;
                         }
-                        cpu->cc = getCC(cpu->mdr); // TODO should this be set in this phase?
+                        cpu->cc = getCC(cpu->mdr); 
                         break;
                     case OP_AND:
                         if (bit5 == 0) {
@@ -227,19 +249,14 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         } else if (bit5 == 1) {
                             cpu->mdr = cpu->reg[sr1] & immed;
                         }
-                        cpu->cc = getCC(cpu->mdr); // TODO should this be set in this phase?
+                        cpu->cc = getCC(cpu->mdr); 
                         break;
                     case OP_NOT:
                         cpu->mdr = ~cpu->reg[sr1]; // Interpret as a negative if the leading bit is a 1.
-                        cpu->cc = getCC(cpu->mdr); // TODO should this be set in this phase?
+                        cpu->cc = getCC(cpu->mdr); 
                         break;
                     case OP_TRAP:
-                        // Book page 222.
-                        //vector16   = ZEXT(vector8); // TODO: should we make this actually do a zero extend to 16 bits?
-                        //cpu->mar    = vector16;
                         cpu->reg[7] = cpu->pc; // Store the PC in R7 before loading PC with the starting address of the service routine.
-                        //cpu->mdr    = memory[cpu->mar]; // read the contents of the register.
-                        //cpu->pc     = cpu->mdr; // The contents of the MDR are loaded into the PC.  Load the PC with the starting address of the service routine.
                         trap(vector8, cpu, theWindow);
                         break;
                     case OP_JMP:
@@ -266,11 +283,13 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         cpu->reg[dr] = cpu->mdr;
                         break;
                     case OP_LD:
+		    case OP_LDI:
                     case OP_LDR:
                         cpu->reg[dr] = cpu->mdr; // Load into the register.
 			cpu->cc = getCC(cpu->reg[dr]);
                         break;
                     case OP_ST:
+		    case OP_STI:
                     case OP_STR:
                         memory[cpu->mar] = cpu->mdr;     // Store into memory.
                         break;
@@ -278,6 +297,17 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         cpu->reg[dr] = cpu->pc + offset;
                         cpu->cc = getCC(cpu->reg[dr]);
                         break;
+		    case OP_STACK:
+			if (bit5 == 0) { //push
+			    //decrement stack pointer then store the source register
+			    cpu->reg[6]--;
+			    memory[cpu->reg[6]] = cpu->reg[dr];
+			} else { //pop
+			   //load the destination register with the stack pointer then increment SP
+			    cpu->reg[dr] = memory[cpu->reg[6]];
+			    cpu->reg[6]++;
+			}
+			break;
                 }
                 // do any clean up here in prep for the next complete cycle
                 isCycleComplete = true;

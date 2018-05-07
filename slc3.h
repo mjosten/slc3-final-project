@@ -1,10 +1,10 @@
 /*
  *  slc3.h
  *
- *  Date Due: May 2, 2018
- *  Authors:  Sam Brendel, Mike Josten
- *  Problem 5
- *  version: 4.30d
+ *  Date Due: June 1, 2018
+ *  Authors:  Mike Josten
+ *  Final Project
+ *  version: 5.6a
  */
 #include <stdio.h>
 #include <stdbool.h>
@@ -35,13 +35,23 @@
 #define OP_NOT   9 // 1001 0000 0000 0000
 #define OP_TRAP 15 // 1111 0000 0000 0000
 #define OP_LD    2 // 0010 0000 0000 0000
+#define OP_LDI  10 // 1010 0000 0000 0000
 #define OP_LDR   6 // 0110 0000 0000 0000
 #define OP_ST    3 // 0011 0000 0000 0000
+#define OP_STI  11 // 1011 0000 0000 0000
 #define OP_STR   7 // 0111 0000 0000 0000
 #define OP_JMP  12 // 1100 0000 0000 0000
 #define OP_BR    0 // 0000 0000 0000 0000
 #define OP_JSR   4 // 0100 0000 0000 0000
 #define OP_LEA  14 // 1110 0000 0000 0000
+#define OP_STACK 13// 1101 0000 0000 0000
+/* Stack operation allows for pushing or popping
+* OP  Dr/Sr1  empty  bit5  empty
+* 4     3       3      1     5
+* bit5 = 0, push source onto stack
+* bit5 = 1, pop from stack to destination register
+* R6 is the stack pointer
+*/
 
 #define MASK_OPCODE  61440 // 1111 0000 0000 0000
 #define MASK_DR       3584 // 0000 1110 0000 0000
