@@ -119,9 +119,9 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                     // compute effective address, e.g. add sext(immed7) to
                     // register
                     case OP_LD:
-			dr = (cpu->ir & MASK_DR) >> BITSHIFT_DR;
-			offset = cpu->ir & MASK_PCOFFSET9;
-			offset = SEXT(offset, BIT_PCOFFSET9);
+						dr = (cpu->ir & MASK_DR) >> BITSHIFT_DR;
+						offset = cpu->ir & MASK_PCOFFSET9;
+						offset = SEXT(offset, BIT_PCOFFSET9);
                         cpu->mar = cpu->pc + offset; // microstate 2.
                         cpu->mdr = memory[cpu->mar]; // microstate 25.
                         break;
@@ -129,31 +129,31 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         dr       = (cpu->ir & MASK_DR)  >> BITSHIFT_DR;
                         sr1      = (cpu->ir & MASK_SR1) >> BITSHIFT_SR1;
                         offset   =  cpu->ir & MASK_PCOFFSET6;
-			offset = SEXT(offset, BIT_PCOFFSET6);
+						offset = SEXT(offset, BIT_PCOFFSET6);
                         cpu->mar =  cpu->reg[sr1] + offset;
                         cpu->mdr =  memory[cpu->mar];
                         break;
                     case OP_ST:
                         dr       = (cpu->ir & MASK_DR) >> BITSHIFT_DR;         // This is actually a source register, but still use dr.
                         offset   =  cpu->ir & MASK_PCOFFSET9;
-			offset = SEXT(offset, BIT_PCOFFSET9);
+						offset = SEXT(offset, BIT_PCOFFSET9);
                         cpu->mar =  cpu->pc + offset; // microstate 2.
                         break;
                     case OP_STR:
                         dr       = (cpu->ir  & MASK_DR)  >> BITSHIFT_DR;  //actually source register
                         sr1      = (cpu->ir  & MASK_SR1) >> BITSHIFT_SR1;  //base register
                         offset   =  cpu->ir  & MASK_PCOFFSET6;
-			offset = SEXT(offset, BIT_PCOFFSET6);
+						offset = SEXT(offset, BIT_PCOFFSET6);
                         cpu->mar =  cpu->reg[sr1] + offset;
                         break;
                     case OP_LEA:
                         dr       = (cpu->ir & MASK_DR) >> BITSHIFT_DR;
                         offset   =  cpu->ir & MASK_PCOFFSET9;
-			offset = SEXT(offset, BIT_PCOFFSET9);
+						offset = SEXT(offset, BIT_PCOFFSET9);
                         break;
                     case OP_JSR:
                         offset = cpu->ir & MASK_PCOFFSET11;
-			offset = SEXT(offset, BIT_PCOFFSET11);
+						offset = SEXT(offset, BIT_PCOFFSET11);
                     break;
                 }
                 state = FETCH_OP;
@@ -173,7 +173,7 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                             sr2 = cpu->ir & MASK_SR2; // no shift needed.
                         } else if (bit5 == 1) {
                             immed = cpu->ir & MASK_IMMED5; // no shift needed.
-			    immed = SEXT(immed, BIT_IMMED);
+			    			immed = SEXT(immed, BIT_IMMED);
                         }
                         // The book page 106 says current microprocessors can be done simultaneously during fetch, but this simulator is old skool.
                         break;
@@ -246,7 +246,7 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                         cpu->pc = cpu->reg[sr1];
                         break;
                     case OP_BR: ;
-			offset = SEXT(offset, BIT_PCOFFSET9);
+						offset = SEXT(offset, BIT_PCOFFSET9);
                         if (branchEnabled(nzp, cpu)) {
                             cpu->pc += (offset);
 			    
@@ -268,7 +268,7 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                     case OP_LD:
                     case OP_LDR:
                         cpu->reg[dr] = cpu->mdr; // Load into the register.
-			cpu->cc = getCC(cpu->reg[dr]);
+						cpu->cc = getCC(cpu->reg[dr]);
                         break;
                     case OP_ST:
                     case OP_STR:
@@ -496,7 +496,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
     initscr();
     cbreak();
     clear();
-    WINDOW *main_win = newwin(32, 49, 0, 0);
+    WINDOW *main_win = newwin(32, 80, 0, 0);
     box(main_win, 0, 0);
     refresh();
 
@@ -507,7 +507,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
         int newStart = 0;
         char inStart[4];
         char *fileName = malloc(FILENAME_SIZE * sizeof(char)); //char fileName[FILENAME_SIZE];
-        mvwprintw(main_win, 1, 1,  "Welcome to the LC-3 Simulator Simulator");
+        mvwprintw(main_win, 1, 20,  "Welcome to the LC-3 Simulator Simulator");
         mvwprintw(main_win, 2, 1,  "Registers");
         mvwprintw(main_win, 2, 31, "Memory");
 
@@ -542,13 +542,12 @@ void displayCPU(CPU_p *cpu, int memStart) {
         i++;
         // Last 2 lines.
         mvwprintw(main_win, 18, 28, "x%04X: x%04X", i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
-        mvwprintw(main_win, 19, 1, "Select: 1) Load 3) Step 5) Display Mem  9) Exit");
-        mvwprintw(main_win, 20, 1, "        2) Run                                 ");
+        mvwprintw(main_win, 19, 1, "Select: 1) Load 2) Save 3) Step 4) Run 5) DispMem 6) Edit 8) BreakPt 9) Exit");
         cursorAtPrompt(main_win, "");
         if (cpu->pc == 0 && !isHalted) {
             // Only do a single time, else what you want to display gets obliterated.
-            mvwprintw(main_win, 23, 1, "Input                                          ");
-            mvwprintw(main_win, 24, 1, "Output                                         ");
+            mvwprintw(main_win, 22, 1, "Input                                          ");
+            mvwprintw(main_win, 23, 1, "Output                                         ");
 	    outputColCounter = 0;
         }
         cursorAtPrompt(main_win, ""); // twice necessary to prevent overwrite.
@@ -556,14 +555,6 @@ void displayCPU(CPU_p *cpu, int memStart) {
         while(rePromptUser) {
             rePromptUser = false;
             CPU_p cpuTemp;
-            move(21, 1);
-            clrtoeol();
-            move(22, 1);
-            clrtoeol();
-            move(23, 1);
-            clrtoeol();
-            move(24, 1);
-            clrtoeol();
             noecho();
             if (isRun) {
                 c = '3'; // keep stepping until TRAP x25 is hit.
@@ -587,12 +578,13 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     refresh();
                     break;
                 case '2':
-                    
-                    isRun = true;
-                    break;
+                	break;
                 case '3':
                     //printf("CASE3\n"); // do nothing.  Just let the PC run the next instruction.
                     controller(cpu, main_win); // invoke exclusively in case 3.
+                    break;
+                case '4':
+                    isRun = true;
                     break;
                 case '5':
                     while (rePromptHex) {
@@ -617,6 +609,10 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     }
                     //printf("CASE5\n"); // Update the window for the memory registers.
                     break;
+                case '6':
+                	break;
+                case '8':
+                	break;
                 case '9':
                     //printf("CASE9\n");
                     endwin();
@@ -636,15 +632,15 @@ void displayCPU(CPU_p *cpu, int memStart) {
 void cursorAtPrompt(WINDOW *theWindow, char *theText) {
     if (!isHalted) {
          // First wipe out what ever is there.
-        mvwprintw(theWindow, 21, 1, "                                               ");
+        mvwprintw(theWindow, 20, 1, "                                               ");
     }
-    mvwprintw(theWindow, 22, 1, "-----------------------------------------------");
-    mvwprintw(theWindow, 21, 1, theText); //The last place the cursor will sit.
+    mvwprintw(theWindow, 21, 1, "------------------------------------------------------------------------------");
+    mvwprintw(theWindow, 20, 1, theText); //The last place the cursor will sit.
     refresh();
 }
 
 void cursorAtInput(WINDOW *theWindow, char *theText) {
-    int input = mvwgetch(theWindow, 23, 8);
+    int input = mvwgetch(theWindow, 22, 8);
     theText[0] = input;
     refresh();
 }

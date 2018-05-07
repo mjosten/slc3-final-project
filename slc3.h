@@ -16,7 +16,7 @@
 #define MEMORY_SIZE       10000
 #define FILENAME_SIZE       200
 #define STRING_SIZE         200
-#define OUTPUT_LINE_NUMBER   24
+#define OUTPUT_LINE_NUMBER   23
 #define OUTPUT_COL_NUMBER     8
 #define OUTPUT_AREA_DEPTH     6
 #define ADDRESS_MIN      0x3000
