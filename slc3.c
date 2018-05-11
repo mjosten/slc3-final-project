@@ -131,8 +131,11 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
 			offset = SEXT(offset, BIT_PCOFFSET9);
 			cpu->mar = cpu->pc + offset;
 			cpu->mdr = memory[cpu->mar];
+			//need to subtract by x3000 becuase user space starts at 0
+			cpu->mdr -= ADDRESS_MIN;
 			cpu->mar = cpu->mdr;
 			cpu->mdr = memory[cpu->mar];
+			
 			break;
                     case OP_LDR:
                         dr       = (cpu->ir & MASK_DR)  >> BITSHIFT_DR;
@@ -154,6 +157,8 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
 			offset = SEXT(offset, BIT_PCOFFSET9);
 			cpu->mar = cpu->pc + offset;
 			cpu->mdr = memory[cpu->mar];
+			//needs to be subtracted by x3000 becuase memory user space starts at 0.
+			cpu->mdr -= ADDRESS_MIN;
 			cpu->mar = cpu->mdr;
 			break;
                     case OP_STR:
@@ -206,6 +211,7 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                     case OP_STR:
                         // Book page 124.
                         cpu->mdr = cpu->reg[dr];
+			
                         break;
                     case OP_JMP:
                         sr1 = (cpu->ir & MASK_SR1) >> BITSHIFT_SR1;
