@@ -510,6 +510,9 @@ void displayCPU(CPU_p *cpu, int memStart) {
         char saveFileName[20];
         int fileExists;
         int ii;
+        char memLocChange[4];
+        char memConChange[4];
+        short newMemLoc;
         char *fileName = malloc(FILENAME_SIZE * sizeof(char)); //char fileName[FILENAME_SIZE];
         mvwprintw(main_win, 1, 20,  "Welcome to the LC-3 Simulator Simulator");
         mvwprintw(main_win, 2, 1,  "Registers");
@@ -607,6 +610,8 @@ void displayCPU(CPU_p *cpu, int memStart) {
                 		}
                 		fprintf(fptr, "%04x\n", memory[ii + (memStart - ADDRESS_MIN)]);
                 		fclose(fptr);
+                	} else {
+                		cursorAtPrompt(main_win, "Error creating file. File does not exist.");
                 	}
                 	break;
                 case '3':
@@ -640,6 +645,21 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     //printf("CASE5\n"); // Update the window for the memory registers.
                     break;
                 case '6':
+                	cursorAtPrompt(main_win, "Memory Location To Be Changed: ");
+                	wgetstr(main_win, memLocChange);
+                	if(hexCheck(memLocChange)) {
+                		newMemLoc = strtol(memLocChange, NULL, MAX_BIN_BITS);
+                		cursorAtPrompt(main_win, "New Value To Be Stored: ");
+                		wgetstr(main_win, memConChange);
+                		if (hexCheck(memConChange)) {
+                			memory[newMemLoc - ADDRESS_MIN] = strtol(memConChange, NULL, MAX_BIN_BITS);
+                			displayCPU(cpu, newMemLoc - 7);
+                		} else {
+                			cursorAtPrompt(main_win, "Did not input a valid hex value.");
+                		}
+                	} else {
+                		cursorAtPrompt(main_win, "Did not input a valid hex value.");
+                	}
                 	break;
                 case '8':
                 	break;
