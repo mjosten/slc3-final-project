@@ -108,7 +108,7 @@ struct CPUType {
 };
 
 typedef struct CPUType CPU_p;
-
+int arrayContains(unsigned short *array, unsigned short target, int size);
 int controller (CPU_p *, WINDOW *);
 void displayCPU(CPU_p *, int);
 void zeroOut(unsigned short *array, int);

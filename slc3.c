@@ -21,6 +21,7 @@ bool isHalted = false;
 bool isRun = false;
 int outputLineCounter = 0;
 int outputColCounter = 0;
+unsigned short breakpoints[MEMORY_SIZE];
 
 /**
  * Simulates trap table lookup.
@@ -95,6 +96,10 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
         switch (state) {
             case FETCH: // microstates 18, 33, 35 in the book.
                 //printf("Now in FETCH---------------\n");
+               if (arrayContains(breakpoints, cpu->pc, MEMORY_SIZE) > 0 ){
+                    //isHalted = true;
+                    isRun = false;
+                }
                 cpu->mar = cpu->pc;           // Step 1: MAR is loaded with the contends of the PC,
                 cpu->pc++;                    //         and also increment PC. Only done in the FETCH phase.
                 cpu->mdr = memory[cpu->mar];  // Step 2: Interrogate memory, resulting in the instruction placed into the MDR.
@@ -610,6 +615,31 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     //printf("CASE5\n"); // Update the window for the memory registers.
                     break;
                 case '6':
+                cursorAtPrompt(main_win, "Breakpoint location: ");
+                wgetstr(main_win, inStart);
+                
+                //check if we're removing a value
+                if (hexCheck(inStart)) {
+                    int found = 0;
+                    int i;
+                    unsigned short int bp = strtol(inStart, NULL, MAX_BIN_BITS);
+                    for (i = 0; i < MEMORY_SIZE; i++){
+                        if (breakpoints[i] == bp){
+                            breakpoints[i] == 0;
+                            found = 1;
+                        }
+                    }
+                    if (found > 0) {
+                        //if not, add the new value in
+                        for (i = 0; i < MEMORY_SIZE; i++){
+                            if (breakpoints[i] == 0){
+                                breakpoints[i] = bp;
+                            }
+                        }
+                    }
+                }
+                    
+                
                 	break;
                 case '8':
                 	break;
@@ -706,6 +736,20 @@ void zeroOut(unsigned short *array, int quantity) {
     for (i = 0; i <= quantity; i++) {
         array[i] = 0;
     }
+}
+
+/**
+ * Returns 1 if array element exists, 0 otherwise 
+ */
+int arrayContains(unsigned short *array, unsigned short target, int size) {
+    int i;
+    
+    for (i = 0; i < size; i++)
+    {
+        if (array[i] == target) return 1;
+    }
+    
+    return 0;
 }
 
 /**
@@ -813,6 +857,7 @@ void loadProgramInstructions(FILE *inputFile, WINDOW *theWindow) {
 int main(int argc, char* argv[]) {
     char *fileName = argv[1]; //char *fileName = "./HW3.hex";
     CPU_p cpu = initialize();
+    zeroOut(breakpoints, MEMORY_SIZE);
     if(fileName != NULL) {
         loadProgramInstructions(openFileText(fileName, NULL), NULL);
     }
