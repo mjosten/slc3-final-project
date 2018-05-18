@@ -17,7 +17,6 @@
 #include <ctype.h>
 
 unsigned short memory[MEMORY_SIZE];
-bool isHalted = false;
 bool isRun = false;
 int outputLineCounter = 0;
 int outputColCounter = 0;
@@ -68,8 +67,7 @@ void trap(unsigned short vector, CPU_p *cpu, WINDOW *theWindow) {
             break;
         case TRAP_VECTOR_X25: // HALT
             cursorAtPrompt(theWindow, "==========HALT==========");
-            //cpu->pc = 0; // reset to zero as per Prof Mobus.
-            isHalted = true;
+            cpu->pc = 0; // reset to zero as per Prof Mobus.
             isRun = false;
             break;
         default: 
@@ -82,7 +80,7 @@ void trap(unsigned short vector, CPU_p *cpu, WINDOW *theWindow) {
  * The controller component of the LC-3 simulator.
  * @param cpu the cpu object to contain data.
  */
-int controller(CPU_p *cpu, WINDOW *theWindow) {
+int controller(CPU_p *cpu, WINDOW *theWindow, bool step) {
 
     // check to make sure both pointers are not NULL
     // do any initializations here
@@ -92,14 +90,10 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
     bool isCycleComplete = false;
 
     state = FETCH;
-    while (!isHalted) {
+    while (isRun) {
         switch (state) {
             case FETCH: // microstates 18, 33, 35 in the book.
                 //printf("Now in FETCH---------------\n");
-               if (arrayContains(breakpoints, cpu->pc, MEMORY_SIZE) > 0 ){
-                    //isHalted = true;
-                    isRun = false;
-                }
                 cpu->mar = cpu->pc;           // Step 1: MAR is loaded with the contends of the PC,
                 cpu->pc++;                    //         and also increment PC. Only done in the FETCH phase.
                 cpu->mdr = memory[cpu->mar];  // Step 2: Interrogate memory, resulting in the instruction placed into the MDR.
@@ -290,11 +284,12 @@ int controller(CPU_p *cpu, WINDOW *theWindow) {
                 break;
         } // end switch (state)
 
-        if (isHalted) {
-            cpu->pc = 0;
-        }
+        //if (!isRun) {
+        //    cpu->pc = 0;
+        //}
 
-        if (isHalted || isCycleComplete) {
+        if (step && isCycleComplete) {
+            isRun = false;
            break;
         }
     } // end for()
@@ -497,7 +492,6 @@ unsigned short ZEXT(unsigned short value) {
 void displayCPU(CPU_p *cpu, int memStart) {
     int c;
     int hexExit;
-    isHalted = false; // TODO does this affect anything adversely?
     initscr();
     cbreak();
     clear();
@@ -556,7 +550,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
         mvwprintw(main_win, 18, 28, "x%04X: x%04X", i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
         mvwprintw(main_win, 19, 1, "Select: 1) Load 2) Save 3) Step 4) Run 5) DispMem 6) Edit 8) BreakPt 9) Exit");
         cursorAtPrompt(main_win, "");
-        if (cpu->pc == 0 && !isHalted) {
+        if (cpu->pc == 0) {
             // Only do a single time, else what you want to display gets obliterated.
             mvwprintw(main_win, 22, 1, "Input                                          ");
             mvwprintw(main_win, 23, 1, "Output                                         ");
@@ -564,23 +558,19 @@ void displayCPU(CPU_p *cpu, int memStart) {
         }
         cursorAtPrompt(main_win, ""); // twice necessary to prevent overwrite.
 
-        while(rePromptUser) {
             rePromptUser = false;
             CPU_p cpuTemp;
             noecho();
-            if (isRun) {
-                c = '3'; // keep stepping until TRAP x25 is hit.
-            } else {
-                c = wgetch(main_win); // This is what stops to prompt the user for an Option input.
-            }
+            
+            c = wgetch(main_win); // This is what stops to prompt the user for an Option input.
             echo();
+            
             box(main_win, 0, 0);
             refresh();
             switch(c){
                 case '1':
                     cpuTemp = initialize();
                     clearOutput(main_win);
-                    isHalted = false;
                     cpu = &cpuTemp;
                     cursorAtPrompt(main_win, "Specify file name: ");
                     wgetstr(main_win, fileName);
@@ -620,16 +610,20 @@ void displayCPU(CPU_p *cpu, int memStart) {
                 	}
                 	break;
                 case '3':
-                    //printf("CASE3\n"); // do nothing.  Just let the PC run the next instruction.
-                    controller(cpu, main_win); // invoke exclusively in case 3.
+                // do nothing.  Just let the PC run the next instruction.
+                    isRun = true;
+                    controller(cpu, main_win, true); 
+                    wrefresh(main_win);
+                    refresh();
                     break;
                 case '4':
                     isRun = true;
+                    controller(cpu, main_win, false);
+                    wrefresh(main_win);
+                    refresh();
                     break;
                 case '5':
                     while (rePromptHex) {
-                        //mvwprintw(main_win, 21, 1, "Push Q to return to main menu.");
-                        //mvwprintw(main_win, 22, 1, "New Starting Address: x");
                         cursorAtPrompt(main_win, "New Starting Address: ");
                         wgetstr(main_win, inStart);
                         box(main_win, 0, 0);
@@ -695,7 +689,6 @@ void displayCPU(CPU_p *cpu, int memStart) {
                 case '9':
                     //printf("CASE9\n");
                     endwin();
-                    printf("Bubye\n");
                     exit(0);
                     break;
                 default:
@@ -704,12 +697,11 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     break;
             }
             wrefresh(main_win);
-        }
     }
 }
 
 void cursorAtPrompt(WINDOW *theWindow, char *theText) {
-    if (!isHalted) {
+    if (isRun) {
          // First wipe out what ever is there.
         mvwprintw(theWindow, 20, 1, "                                               ");
     }
@@ -847,10 +839,9 @@ FILE* openFileText(char *theFileName, WINDOW *theWindow) {
             printf("\n");
         } else {
             cursorAtPrompt(theWindow, "Error, File not found.");
-            isHalted = true;
+
         }
     } else {
-        isHalted = false;
         //printf("\nSUCCESS: File Found: %s\n\n", theFileName); // debugging
     }
     return dataFile;
@@ -893,7 +884,6 @@ void loadProgramInstructions(FILE *inputFile, WINDOW *theWindow) {
                     , ADDRESS_MIN, (ADDRESS_MIN + MEMORY_SIZE));
             } else {
                 cursorAtPrompt(theWindow, "Error, address "); // TODO specify min and max address.
-                isHalted = true;
             }
         }
         fclose(inputFile);
