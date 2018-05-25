@@ -106,6 +106,32 @@ StackBase 	.FILL 	xOOOO
 UnderflowMsg 	.FILL 	X000A
 		.STRINGZ "Error: Too Few Values on the Stack."
 
+PUSH 		ST 	R1,Save1
+		LEA 	R1,StackMax
+		NOT 	R1, R1
+		ADD 	R1,R1,#1
+		ADD 	R1,R1,R6
+		BRz 	Overflow
+		ADD 	R6,R6,#-1
+		STR 	R0,R6,#0
+		BRnzp 	Success_exit
+
+Overflow 	ST 	R7,Save
+		LEA 	R0,OverflowMsg
+		PUTS
+		LD 	R7,Save
+		LD 	R1,Save1 
+		AND 	R5,R5,#0
+		ADD 	R5,R5,#1
+		RET
+
+Success_exit 	LD 	R1,Save1
+		AND 	R5,R5,#0
+		RET
+
+Save1 		.FILL 	X0000
+OverflowMsg 	.STRINGZ "Error: Stack is Full."
+
 RangeCheck 	LD 	R5,Neg999
 		ADD 	R4,R0,R5
 		BRp 	BadRange
@@ -184,6 +210,23 @@ OpNeg 		JSR 	POP
 		ADD 	R0,R0, #1
 		JSR 	PUSH
 
+OpDisplay	JSR	POP
+		ADD	R5,R5,#0
+		BRp	NewCommand
+		JSR	BinarytoASCII
+		LD	R0, NewlineChar
+		OUT	
+		LEA	R0, ASCIIBUFF
+		PUTS	
+		ADD	R6,R6,#-1
+		BRnzp	NewCommand
+
+NewlineChar	.FILL	x000A
+
+OpClear 	LEA	R6, StackBase
+		ADD	R6,R6,#1
+		BRnzp 	NewCommand
+
 ASCIItoBinary 	AND	R0,R0,#0
 		ADD	R1,R1,#0
 		BRz	DoneAtoB
@@ -251,7 +294,7 @@ NegSign 	LD 	R2,ASCIIminus
 		NOT 	R0,R0
 		ADD 	R0,R0,#1 
 
-BeginlOO 	LD 	R2,ASCIIoffset 
+Begin1OO 	LD 	R2,ASCIIoffset 
 		LD 	R3,Neg1OO 
 
 Loop1OO 	ADD 	R0,R0,R3
