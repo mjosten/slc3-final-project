@@ -17,10 +17,11 @@
 #include <ctype.h>
 
 unsigned short memory[MEMORY_SIZE];
+unsigned short mem_start;
 bool isRun = false;
 int outputLineCounter = 0;
 int outputColCounter = 0;
-unsigned short breakpoints[MEMORY_SIZE];
+unsigned short int breakpoints[MEMORY_SIZE];
 
 /**
  * Simulates trap table lookup.
@@ -290,9 +291,19 @@ int controller(CPU_p *cpu, WINDOW *theWindow, bool step) {
 
         if (step && isCycleComplete) {
             isRun = false;
-           break;
         }
-    } // end for()
+        
+        //find any breakpoints
+        else if (isCycleComplete){
+            int i;
+            for (i = 0; i < MEMORY_SIZE; i++){
+                if (cpu->pc + mem_start == breakpoints[i]) {
+                    isRun = false;
+                }
+            }
+            
+        }
+    } // end while()
     return 0;
 } // end controller()
 
@@ -517,28 +528,34 @@ void displayCPU(CPU_p *cpu, int memStart) {
         mvwprintw(main_win, 2, 1,  "Registers");
         mvwprintw(main_win, 2, 31, "Memory");
 
-        // First 8 lines
+    
         int i = 0;
+        int j = 0;
+        //registers all on one loop
         for(i = 0; i < 8; i++) {
             mvwprintw(main_win, 3+i, 1, "R%u: x%04X", i, cpu->reg[i]);   // Registers.
-            mvwprintw(main_win, 3+i, 28, "x%04X: x%04X", i+memStart, memory[i + (memStart - ADDRESS_MIN)]); // Memory.
+        }
+        
+        //memory all on one loop
+        for (i = 0; i < 16; i++) {
+            
+            for (j = 0; j < MEMORY_SIZE; j++){
+                if (i+memStart == breakpoints[j]) {
+                     mvwprintw(main_win, 3+i, 28, "* x%04X: x%04X       ", i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
+                     break;
+                }
+                mvwprintw(main_win, 3+i, 28, "x%04X: x%04X     ", i+memStart, memory[i + (memStart - ADDRESS_MIN)]); // Memory.
+       
+            }
         }
 
-        // Next 3 lines
-        int j = 0;
-        for (j = 0; j < 3; j++) {
-            mvwprintw(main_win, 11+j, 28, "x%04X: x%04X", i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
-            i++;
-        }
-
-        // Next 4 lines.
-        mvwprintw(main_win, 14, 1, "PC:  x%04X    IR: x%04X    x%04X: x%04X", cpu->pc+ADDRESS_MIN, cpu->ir, i+memStart, memory[i+(memStart-ADDRESS_MIN)]);
+        mvwprintw(main_win, 14, 1, "PC:  x%04X    IR: x%04X", cpu->pc+ADDRESS_MIN, cpu->ir, i+memStart, memory[i+(memStart-ADDRESS_MIN)]);
         i++;
-        mvwprintw(main_win, 15, 1, "A:   x%04X     B: x%04X    x%04X: x%04X", cpu->A, cpu->B, i+memStart, memory[i+(memStart - ADDRESS_MIN)]);
+        mvwprintw(main_win, 15, 1, "A:   x%04X     B: x%04X", cpu->A, cpu->B, i+memStart, memory[i+(memStart - ADDRESS_MIN)]);
         i++;
-        mvwprintw(main_win, 16, 1, "MAR: x%04X   MDR: x%04X    x%04X: x%04X", cpu->mar+ADDRESS_MIN, cpu->ir, i+memStart, memory[i+(memStart-ADDRESS_MIN)]);
+        mvwprintw(main_win, 16, 1, "MAR: x%04X   MDR: x%04X", cpu->mar+ADDRESS_MIN, cpu->ir, i+memStart, memory[i+(memStart-ADDRESS_MIN)]);
         i++;
-        mvwprintw(main_win, 17, 1, "CC:  N:%d Z:%d P:%d           x%04X: x%04X",
+        mvwprintw(main_win, 17, 1, "CC:  N:%d Z:%d P:%d",
                 (cpu->cc >> BITSHIFT_CC_BIT3) & MASK_CC_N,
                 (cpu->cc >> BITSHIFT_CC_BIT2) & MASK_CC_Z,
                 cpu->cc  & MASK_CC_P,
@@ -546,8 +563,6 @@ void displayCPU(CPU_p *cpu, int memStart) {
                 memory[i+(memStart-ADDRESS_MIN)]);
 
         i++;
-        // Last 2 lines.
-        mvwprintw(main_win, 18, 28, "x%04X: x%04X", i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
         mvwprintw(main_win, 19, 1, "Select: 1) Load 2) Save 3) Step 4) Run 5) DispMem 6) Edit 8) BreakPt 9) Exit");
         cursorAtPrompt(main_win, "");
         if (cpu->pc == 0) {
@@ -561,6 +576,9 @@ void displayCPU(CPU_p *cpu, int memStart) {
             rePromptUser = false;
             CPU_p cpuTemp;
             noecho();
+            
+            
+        
             
             c = wgetch(main_win); // This is what stops to prompt the user for an Option input.
             echo();
@@ -672,18 +690,23 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     unsigned short int bp = strtol(inStart, NULL, MAX_BIN_BITS);
                     for (i = 0; i < MEMORY_SIZE; i++){
                         if (breakpoints[i] == bp){
-                            breakpoints[i] == 0;
+                            breakpoints[i] = 0;
                             found = 1;
                         }
+
                     }
-                    if (found > 0) {
+                    if (found == 0) {
                         //if not, add the new value in
                         for (i = 0; i < MEMORY_SIZE; i++){
                             if (breakpoints[i] == 0){
                                 breakpoints[i] = bp;
+                                break;
                             }
                         }
                     }
+                }
+                else {
+                    cursorAtPrompt(main_win, "Did not input a valid hex value.");
                 }
                 	break;
                 case '9':
@@ -871,6 +894,7 @@ void loadProgramInstructions(FILE *inputFile, WINDOW *theWindow) {
         // In this simulator, we start at ADDRESS_MIN which is the zero'th element in memory[].
         if (startingAddress >= ADDRESS_MIN) {
             i = (startingAddress - ADDRESS_MIN);
+            mem_start = startingAddress;
             while(!feof(inputFile)) {
                 fgets(instruction, length, inputFile);
                 memory[i] = strtol(instruction, NULL, MAX_BIN_BITS);
