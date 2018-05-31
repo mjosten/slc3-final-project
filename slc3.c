@@ -471,7 +471,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
         mvwprintw(main_win, 1, 20,  "Welcome to the LC-3 Simulator Simulator");
         mvwprintw(main_win, 2, 1,  "Registers");
         mvwprintw(main_win, 2, 31, "Memory");
-
+        bool firstRun = true;
     
         int i = 0;
         int j = 0;
@@ -509,12 +509,6 @@ void displayCPU(CPU_p *cpu, int memStart) {
         i++;
         mvwprintw(main_win, 19, 1, "Select: 1) Load 2) Save 3) Step 4) Run 5) DispMem 6) Edit 8) BreakPt 9) Exit");
         cursorAtPrompt(main_win, "");
-        if (cpu->pc == 0) {
-            // Only do a single time, else what you want to display gets obliterated.
-            mvwprintw(main_win, 22, 1, ">                                          ");
-            mvwprintw(main_win, 23, 1, "                                           ");
-	    outputColCounter = 0;
-        }
         cursorAtPrompt(main_win, ""); // twice necessary to prevent overwrite.
 
             rePromptUser = false;
@@ -572,12 +566,14 @@ void displayCPU(CPU_p *cpu, int memStart) {
                 case '3':
                 // do nothing.  Just let the PC run the next instruction.
                     isRun = true;
+                    firstRun = false;
                     controller(cpu, main_win, true); 
                     wrefresh(main_win);
                     refresh();
                     break;
                 case '4':
                     isRun = true;
+                    firstRun = false;
                     controller(cpu, main_win, false);
                     wrefresh(main_win);
                     refresh();
