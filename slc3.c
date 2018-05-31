@@ -443,97 +443,7 @@ unsigned short ZEXT(unsigned short value) {
     return value;
 }
 
-// OLD FUNCTION WITHOUT NCURSES.
-/*void displayCPU(CPU_p *cpu, int memStart) {
-    for(;;) {
-        //printf("---displayCPU()\n"); // debugging
-        bool rePromptUser = true;
-        int menuSelection = 0;
-        int newStart = 0;
-        char *fileName[FILENAME_SIZE];
-        unsigned short tempMar = 0;
-        //printf("isHalted=%d  ", isHalted);
-        printf("Welcome to the LC-3 Simulator Simulator\n");
-        printf("Registers                     Memory\n");
 
-        // First 8 lines
-        int i = 0;
-        for(i = 0; i < 8; i++) {
-            printf("R%u: x%04X", i, cpu->reg[i]);   // Registers.
-            printf("                  x%04X: x%04X\n", i+memStart, memory[i + (memStart - ADDRESS_MIN)]); // Memory.
-        }
-
-        // Next 3 lines
-        int j;
-        for (j = 0; j < 3; j++) {
-            printf("                           x%04X: x%04X\n", i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
-            i++;
-        }
-
-        // Next 4 lines.
-        printf("PC:  x%04X    IR: x%04X    x%04X: x%04X\n", cpu->pc+ADDRESS_MIN, cpu->ir, i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
-        i++;
-        printf("A:   x%04X     B: x%04X    x%04X: x%04X\n", cpu->A, cpu->B, i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
-        i++;
-        printf("MAR: x%04X   MDR: x%04X    x%04X: x%04X\n", cpu->mar+ADDRESS_MIN, cpu->ir, i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
-        i++;
-        printf("CC:  N:%d Z:%d P:%d           x%04X: x%04X\n",
-                cpu->cc >> BITSHIFT_CC_BIT3 & MASK_CC_N,
-                cpu->cc >> BITSHIFT_CC_BIT2 & MASK_CC_Z,
-                cpu->cc  & MASK_CC_P,
-                i+ADDRESS_MIN,
-                memory[i + (memStart - ADDRESS_MIN)]);
-
-        i++;
-        // Last 2 lines.
-        printf("                           x%04X: x%04X\n", i+memStart, memory[i + (memStart - ADDRESS_MIN)]);
-        while(rePromptUser) {
-            rePromptUser = false;
-            printf("Select: 1) Load,  3) Step,  5) Display Mem,  9) Exit\n");
-            fflush(stdout);
-
-            scanf("%d", &menuSelection); // TODO put this back in.  Just debugging.
-            //menuSelection = 3; //TODO debugging, remove me.
-
-            switch(menuSelection) {
-                case 1:
-                    printf("Specify file name: ");
-                    fflush(stdout);
-                    scanf("%s", fileName);
-                    loadProgramInstructions(openFileText(fileName));
-                    break;
-                case 3:
-                    //printf("CASE3\n"); // do nothing.  Just let the PC run the next instruction.
-                    controller(cpu); // invoke exclusively in case 3.
-                    break;
-                case 5:
-                    printf("New Starting Address: x");
-                    fflush(stdout);
-                    scanf("%4X", &newStart);
-
-                    displayCPU(cpu, newStart);
-                    //printf("CASE5\n"); // Update the window for the memory registers.
-                    break;
-                case 9:
-                    //printf("CASE9\n");
-                    //cpu->IR = 0xF025; // TRAP x25
-                    printf("\nBubye\n");
-                    exit(0);
-                    break;
-                default:
-                    printf("---Invalid selection\n.");
-                    rePromptUser = true;
-                    break;
-            }
-            //fflush(stdout);
-        }
-    }
-}*/
-
-/**
- * Print out fields to the console for the CPU_p object.
- * @param cpu the cpu object containing the data.
- */
 void displayCPU(CPU_p *cpu, int memStart) {
     int c;
     int hexExit;
@@ -601,8 +511,8 @@ void displayCPU(CPU_p *cpu, int memStart) {
         cursorAtPrompt(main_win, "");
         if (cpu->pc == 0) {
             // Only do a single time, else what you want to display gets obliterated.
-            mvwprintw(main_win, 22, 1, "Input                                          ");
-            mvwprintw(main_win, 23, 1, "Output                                         ");
+            mvwprintw(main_win, 22, 1, ">                                          ");
+            mvwprintw(main_win, 23, 1, "                                           ");
 	    outputColCounter = 0;
         }
         cursorAtPrompt(main_win, ""); // twice necessary to prevent overwrite.
@@ -610,13 +520,8 @@ void displayCPU(CPU_p *cpu, int memStart) {
             rePromptUser = false;
             CPU_p cpuTemp;
             noecho();
-            
-            
-        
-            
             c = wgetch(main_win); // This is what stops to prompt the user for an Option input.
             echo();
-            
             box(main_win, 0, 0);
             refresh();
             switch(c){
@@ -624,6 +529,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     cpuTemp = initialize();
                     clearOutput(main_win);
                     cpu = &cpuTemp;
+                    cursorAtPrompt(main_win, "                                                 ");
                     cursorAtPrompt(main_win, "Specify file name: ");
                     wgetstr(main_win, fileName);
                     loadProgramInstructions(openFileText(fileName, main_win), main_win);
@@ -632,6 +538,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     refresh();
                     break;
                 case '2':
+                	cursorAtPrompt(main_win, "                                                 ");
                 	cursorAtPrompt(main_win, "Save file name: ");
                 	wgetstr(main_win, saveFileName);
                 	fptr = fopen(saveFileName, "r");
@@ -658,6 +565,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                 		fprintf(fptr, "%04x\n", memory[ii + (memStart - ADDRESS_MIN)]);
                 		fclose(fptr);
                 	} else {
+                		cursorAtPrompt(main_win, "                                                 ");
                 		cursorAtPrompt(main_win, "Error creating file. File does not exist.");
                 	}
                 	break;
@@ -676,6 +584,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     break;
                 case '5':
                     while (rePromptHex) {
+                    	cursorAtPrompt(main_win, "                                                 ");
                         cursorAtPrompt(main_win, "New Starting Address: ");
                         wgetstr(main_win, inStart);
                         box(main_win, 0, 0);
@@ -689,31 +598,36 @@ void displayCPU(CPU_p *cpu, int memStart) {
                             newStart = strtol(inStart, NULL, MAX_BIN_BITS);
                             displayCPU(cpu, newStart);
                         } else {
-                            cursorAtPrompt(main_win, "You must enter a 4-digit hex value. Try again. ");
+                        	cursorAtPrompt(main_win, "                                                 ");
+                            cursorAtPrompt(main_win, "You must enter a 4-digit hex value. Try again.");
                             rePromptHex = true;
                         }
                     }
                     //printf("CASE5\n"); // Update the window for the memory registers.
                     break;
                 case '6':
-
+                	cursorAtPrompt(main_win, "                                                 ");
                 	cursorAtPrompt(main_win, "Memory Location To Be Changed: ");
                 	wgetstr(main_win, memLocChange);
                 	if(hexCheck(memLocChange)) {
                 		newMemLoc = strtol(memLocChange, NULL, MAX_BIN_BITS);
+                		cursorAtPrompt(main_win, "                                                 ");
                 		cursorAtPrompt(main_win, "New Value To Be Stored: ");
                 		wgetstr(main_win, memConChange);
                 		if (hexCheck(memConChange)) {
                 			memory[newMemLoc - ADDRESS_MIN] = strtol(memConChange, NULL, MAX_BIN_BITS);
                 			displayCPU(cpu, newMemLoc - 7);
                 		} else {
+                			cursorAtPrompt(main_win, "                                                 ");
                 			cursorAtPrompt(main_win, "Did not input a valid hex value.");
                 		}
                 	} else {
+                		cursorAtPrompt(main_win, "                                                 ");
                 		cursorAtPrompt(main_win, "Did not input a valid hex value.");
                 	}
                 	break;
                 case '8':
+                cursorAtPrompt(main_win, "                                                 ");
                 cursorAtPrompt(main_win, "Breakpoint location: ");
                 wgetstr(main_win, inStart);
                 
@@ -740,6 +654,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     }
                 }
                 else {
+                	cursorAtPrompt(main_win, "                                                 ");
                     cursorAtPrompt(main_win, "Did not input a valid hex value.");
                 }
                 	break;
@@ -749,6 +664,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     exit(0);
                     break;
                 default:
+                	cursorAtPrompt(main_win, "                                                 ");
                     cursorAtPrompt(main_win, "---Invalid selection ");
                     rePromptUser = true;
                     break;
@@ -793,7 +709,7 @@ void cursorAtOutput(WINDOW *theWindow, char *theText) {
 
 void clearOutput(WINDOW *theWindow) {
     int i;
-    mvwprintw(theWindow, OUTPUT_LINE_NUMBER, 1, "Output                                         ");
+    mvwprintw(theWindow, OUTPUT_LINE_NUMBER, 1, ">                                         ");
     for (i = 1; i <= OUTPUT_AREA_DEPTH; i++) {
         mvwprintw(theWindow, OUTPUT_LINE_NUMBER + i, 2, "                                              ");
     }
