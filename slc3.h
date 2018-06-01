@@ -133,6 +133,7 @@ void displayHeader();
 FILE* openFileText(char *, WINDOW *);
 void loadProgramInstructions(FILE *, WINDOW *);
 int hexCheck(char num[]);
+void clearPrompt(WINDOW *);
 void cursorAtPrompt(WINDOW *, char *);
 void cursorAtInput(WINDOW *, char *);
 void cursorAtOutput(WINDOW *, char *);

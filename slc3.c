@@ -467,13 +467,15 @@ void displayCPU(CPU_p *cpu, int memStart) {
         int menuSelection = 0;
         int newStart = 0;
         char inStart[4];
+        char printEnd[4];
+        int lastPrint = 0;
         FILE *fptr;
         char saveFileName[20];
         int fileExists;
-        int ii;
+        int ii = 0;
         char memLocChange[4];
         char memConChange[4];
-        short newMemLoc;
+        short newMemLoc = 0;
         char *fileName = malloc(FILENAME_SIZE * sizeof(char)); //char fileName[FILENAME_SIZE];
         mvwprintw(main_win, 1, 20,  "Welcome to the LC-3 Simulator Simulator");
         mvwprintw(main_win, 2, 1,  "Registers");
@@ -538,6 +540,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     cpuTemp = initialize();
                     clearOutput(main_win);
                     cpu = &cpuTemp;
+                    clearPrompt(main_win);
                     cursorAtPrompt(main_win, "Specify file name: ");
                     wgetstr(main_win, fileName);
                     loadProgramInstructions(openFileText(fileName, main_win), main_win);
@@ -546,10 +549,10 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     refresh();
                     break;
                 case '2':
+                	clearPrompt(main_win);
                 	cursorAtPrompt(main_win, "Save file name: ");
                 	wgetstr(main_win, saveFileName);
                 	fptr = fopen(saveFileName, "r");
-			printf("what is the fptr, %d\n", fptr == NULL);
                 	if (fptr == NULL) {
                 		fileExists = 0;
                 	} else {
@@ -562,18 +565,24 @@ void displayCPU(CPU_p *cpu, int memStart) {
                 		fptr = fopen(saveFileName, "w+b");
                 	}
                 	if (fptr != NULL) {
-                		fprintf(fptr, "%04x\n", memStart);
-                		while (memory[ii + (memStart - ADDRESS_MIN)] != 0xF025) {
-                			if (memory[ii + (memStart - ADDRESS_MIN)] == 0x0000) {
-                				break;
-                			}
-                			fprintf(fptr, "%04x\n", memory[ii + (memStart - ADDRESS_MIN)]);
+                		fprintf(fptr, "%04x\n", mem_start);
+                		clearPrompt(main_win);
+                		cursorAtPrompt(main_win, "Last memory location you want printed: ");
+                		wgetstr(main_win, printEnd);
+                		if (hexCheck(printEnd)) {
+                            lastPrint = strtol(printEnd, NULL, MAX_BIN_BITS);
+                        } else {
+                        	clearPrompt(main_win);
+                            cursorAtPrompt(main_win, "You must enter a 4-digit hex value. Try again. ");
+                        }
+                		while (mem_start + ii < lastPrint) {
+                			fprintf(fptr, "%04x\n", memory[ii + (mem_start - ADDRESS_MIN)]);
                 			ii++;
                 		}
-                		fprintf(fptr, "%04x\n", memory[ii + (memStart - ADDRESS_MIN)]);
                 		fclose(fptr);
                 	} else {
-                		cursorAtPrompt(main_win, "Error creating file. File does not exist.");
+                		clearPrompt(main_win);
+                		cursorAtPrompt(main_win, "Error creating file.");
                 	}
                 	break;
                 case '3':
@@ -592,6 +601,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     break;
                 case '5':
                     while (rePromptHex) {
+                    	clearPrompt(main_win);
                         cursorAtPrompt(main_win, "New Starting Address: ");
                         wgetstr(main_win, inStart);
                         box(main_win, 0, 0);
@@ -605,6 +615,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                             newStart = strtol(inStart, NULL, MAX_BIN_BITS);
                             displayCPU(cpu, newStart);
                         } else {
+                        	clearPrompt(main_win);
                             cursorAtPrompt(main_win, "You must enter a 4-digit hex value. Try again. ");
                             rePromptHex = true;
                         }
@@ -612,27 +623,30 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     //printf("CASE5\n"); // Update the window for the memory registers.
                     break;
                 case '6':
-
+                	clearPrompt(main_win);
                 	cursorAtPrompt(main_win, "Memory Location To Be Changed: ");
                 	wgetstr(main_win, memLocChange);
                 	if(hexCheck(memLocChange)) {
                 		newMemLoc = strtol(memLocChange, NULL, MAX_BIN_BITS);
+                		clearPrompt(main_win);
                 		cursorAtPrompt(main_win, "New Value To Be Stored: ");
                 		wgetstr(main_win, memConChange);
                 		if (hexCheck(memConChange)) {
                 			memory[newMemLoc - ADDRESS_MIN] = strtol(memConChange, NULL, MAX_BIN_BITS);
                 			displayCPU(cpu, newMemLoc - 7);
                 		} else {
+                			clearPrompt(main_win);
                 			cursorAtPrompt(main_win, "Did not input a valid hex value.");
                 		}
                 	} else {
+                		clearPrompt(main_win);
                 		cursorAtPrompt(main_win, "Did not input a valid hex value.");
                 	}
                 	break;
                 case '8':
+                clearPrompt(main_win);
                 cursorAtPrompt(main_win, "Breakpoint location: ");
                 wgetstr(main_win, inStart);
-                
                 //check if we're removing a value
                 if (hexCheck(inStart)) {
                     int found = 0;
@@ -656,6 +670,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     }
                 }
                 else {
+                	clearPrompt(main_win);
                     cursorAtPrompt(main_win, "Did not input a valid hex value.");
                 }
                 	break;
@@ -665,6 +680,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                     exit(0);
                     break;
                 default:
+                	clearPrompt(main_win);
                     cursorAtPrompt(main_win, "---Invalid selection ");
                     rePromptUser = true;
                     break;
@@ -681,6 +697,10 @@ void cursorAtPrompt(WINDOW *theWindow, char *theText) {
     mvwprintw(theWindow, 21, 1, "------------------------------------------------------------------------------");
     mvwprintw(theWindow, 20, 1, theText); //The last place the cursor will sit.
     refresh();
+}
+
+void clearPrompt(WINDOW *theWindow) {
+	mvwprintw(theWindow, 20, 1, "                                                            ");
 }
 
 void cursorAtInput(WINDOW *theWindow, char *theText) {
