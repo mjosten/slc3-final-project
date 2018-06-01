@@ -575,7 +575,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                         	clearPrompt(main_win);
                             cursorAtPrompt(main_win, "You must enter a 4-digit hex value. Try again. ");
                         }
-                		while (mem_start + ii < lastPrint) {
+                		while (mem_start + ii =< lastPrint) {
                 			fprintf(fptr, "%04x\n", memory[ii + (mem_start - ADDRESS_MIN)]);
                 			ii++;
                 		}
