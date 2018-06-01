@@ -40,8 +40,9 @@ void trap(unsigned short vector, CPU_p *cpu, WINDOW *theWindow) {
             cpu->reg[0] = *input;
                 //printf("\nDOING TRAP X20\n");
             free(input);
+            
             echo(); //turn echo back on.
-                break;
+            break;
             case TRAP_VECTOR_X21: ;// OUT
             /* put R0 value into char variable, then send to "cursor" function */
             char *output = (char*) malloc(sizeof(char) * 2);
@@ -95,7 +96,16 @@ int controller(CPU_p *cpu, WINDOW *theWindow, bool step) {
 
     state = FETCH;
     while (isRun) {
+        isCycleComplete = false;
+        int i;
+        //check for breakpoints
+        for (i = 0; i < MEMORY_SIZE; i++){
+                if (cpu->pc + mem_start == breakpoints[i]) {
+                    step = true;
+                }
+            }
         switch (state) {
+            
             case FETCH: // microstates 18, 33, 35 in the book.
                 //printf("Now in FETCH---------------\n");
                 cpu->mar = cpu->pc;           // Step 1: MAR is loaded with the contends of the PC,
@@ -290,13 +300,13 @@ int controller(CPU_p *cpu, WINDOW *theWindow, bool step) {
                         cpu->reg[dr] = cpu->mdr;
                         break;
                     case OP_LD:
-		    case OP_LDI:
+		            case OP_LDI:
                     case OP_LDR:
                         cpu->reg[dr] = cpu->mdr; // Load into the register.
 			cpu->cc = getCC(cpu->reg[dr]);
                         break;
                     case OP_ST:
-		    case OP_STI:
+		            case OP_STI:
                     case OP_STR:
                         memory[cpu->mar] = cpu->mdr;     // Store into memory.
                         break;
@@ -304,18 +314,18 @@ int controller(CPU_p *cpu, WINDOW *theWindow, bool step) {
                         cpu->reg[dr] = cpu->pc + offset;
                         cpu->cc = getCC(cpu->reg[dr]);
                         break;
-		    case OP_STACK:
-			if (bit5 == 0) { //push
+		            case OP_STACK:
+			            if (bit5 == 0) { //push
 			    //decrement stack pointer then store the source register
-			    cpu->reg[6]--;
-			    memory[cpu->reg[6]] = cpu->reg[dr];
-			} else { //pop
-			   //load the destination register with the stack pointer then increment SP
-			    cpu->reg[dr] = memory[cpu->reg[6]];
-			    cpu->reg[6]++;
-			}
-			break;
-                }
+			            cpu->reg[6]--;
+			            memory[cpu->reg[6]] = cpu->reg[dr];
+			            } else { //pop
+			            //load the destination register with the stack pointer then increment SP
+			                cpu->reg[dr] = memory[cpu->reg[6]];
+			                cpu->reg[6]++;
+			            }
+			        break;
+                    }
                 // do any clean up here in prep for the next complete cycle
                 isCycleComplete = true;
                 state = FETCH;
@@ -329,17 +339,7 @@ int controller(CPU_p *cpu, WINDOW *theWindow, bool step) {
         if (step && isCycleComplete) {
             isRun = false;
         }
-        
-        //find any breakpoints
-        else if (isCycleComplete){
-            int i;
-            for (i = 0; i < MEMORY_SIZE; i++){
-                if (cpu->pc + mem_start == breakpoints[i]) {
-                    isRun = false;
-                }
-            }
-            
-        }
+
     } // end while()
     return 0;
 } // end controller()
@@ -575,7 +575,7 @@ void displayCPU(CPU_p *cpu, int memStart) {
                         	clearPrompt(main_win);
                             cursorAtPrompt(main_win, "You must enter a 4-digit hex value. Try again. ");
                         }
-                		while (mem_start + ii =< lastPrint) {
+                		while (mem_start + ii <= lastPrint) {
                 			fprintf(fptr, "%04x\n", memory[ii + (mem_start - ADDRESS_MIN)]);
                 			ii++;
                 		}
@@ -704,6 +704,7 @@ void clearPrompt(WINDOW *theWindow) {
 }
 
 void cursorAtInput(WINDOW *theWindow, char *theText) {
+    flushinp();
     int input = mvwgetch(theWindow, 22, 3);
     theText[0] = input;
     refresh();
